@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<!--
+  VCP | PROTOTIPO VISUAL del panel de conciliación (sin conexión a ningún sistema).
+  - Datos 100 % FICTICIOS, definidos abajo en DATOS_FICTICIOS. No hay google.script.run, ni Sheets, ni Drive, ni BAC.
+  - Las acciones (registrar, aprobar, rechazar) solo cambian la memoria de esta página y se pierden al recargar.
+  - Un solo archivo con CSS y JS integrados, sin librerías externas: el mismo formato que las páginas de
+    Apps Script (HtmlService) del proyecto, para poder integrarlo después sin cambiar la arquitectura.
+  - Logo: se carga desde logo-vcp.png (el archivo oficial, sin modificar). Si falta, se muestra un espacio reservado.
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VCP Conciliación · Prototipo</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 400; font-display: swap; src: url(fuentes/nunito-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 400; font-display: swap; src: url(fuentes/nunito-latin-ext-400-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 600; font-display: swap; src: url(fuentes/nunito-latin-600-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 600; font-display: swap; src: url(fuentes/nunito-latin-ext-600-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 700; font-display: swap; src: url(fuentes/nunito-latin-700-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 700; font-display: swap; src: url(fuentes/nunito-latin-ext-700-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 800; font-display: swap; src: url(fuentes/nunito-latin-800-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    @font-face { font-family: Nunito; font-style: normal; font-weight: 800; font-display: swap; src: url(fuentes/nunito-latin-ext-800-normal.woff2) format("woff2"); unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  </style>
+  <style>
+    :root {
+      --violeta: #292E85; --violeta-2: #1F2368; --violeta-3: #3A40A0;
+      --turquesa: #12DFDD; --turquesa-osc: #0BB3B1;
+      --fucsia: #E31C69; --azul: #3F93C6;
+      --fondo: #F5F7FC; --superficie: #FFFFFF; --borde: #E1E5F0;
+      --tinta: #1B1F45; --tinta-2: #4A5072; --tinta-3: #6E7491;
+      --ok: #137A4B; --ok-f: #E3F5EC; --aviso: #9A5B00; --aviso-f: #FFF3DC;
+      --grave: #B3261E; --grave-f: #FDE7E5; --info-f: #E6F1F9;
+      --radio: 12px; --sombra: 0 1px 2px rgba(27,31,69,.06), 0 4px 16px rgba(27,31,69,.06);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { font-family: Nunito, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--tinta); background: var(--fondo); font-size: 14px; line-height: 1.45; }
+    button, select, input { font: inherit; }
+    a { color: var(--azul); }
+
+    /* ---------- Estructura ---------- */
+    .app { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh; }
+    .lateral { background: linear-gradient(180deg, #23276F 0%, var(--violeta) 55%, #2E2A86 100%); color: #fff; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+    .marca { padding: 18px 18px 14px; border-bottom: 1px solid rgba(255,255,255,.12); display: flex; flex-direction: column; align-items: flex-start; }
+    .logo { display: block; }
+    .logo img { display: block; height: 92px; width: auto; }
+    .logo .reservado { height: 92px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; color: #fff; border: 1px dashed rgba(255,255,255,.6); border-radius: 6px; padding: 0 6px; }
+    .marca small { display: block; margin-top: 10px; color: rgba(255,255,255,.75); font-size: 12px; letter-spacing: .02em; }
+    nav.menu { padding: 10px 10px; flex: 1; overflow-y: auto; }
+    nav.menu a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 2px 0; color: rgba(255,255,255,.86); text-decoration: none; border-radius: 8px; font-weight: 500; }
+    nav.menu a:hover { background: rgba(255,255,255,.08); color: #fff; }
+    nav.menu a[aria-current="page"] { background: rgba(227,28,105,.16); color: #FF5C98; box-shadow: inset 3px 0 0 var(--fucsia); }
+    nav.menu a .num { margin-left: auto; background: var(--azul); color: #fff; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 1px 7px; }
+    nav.menu a .num.fucsia { background: var(--fucsia); }
+    nav.menu .grupo { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,.55); padding: 14px 12px 4px; }
+    .ico { width: 18px; height: 18px; flex: none; display: inline-block; }
+    .rol { padding: 14px 16px 18px; border-top: 1px solid rgba(255,255,255,.12); }
+    .rol label { display: block; font-size: 12px; color: rgba(255,255,255,.75); margin-bottom: 6px; }
+    .rol select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 0; color: var(--violeta); font-weight: 600; }
+    .rol .quien { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,.8); }
+
+    .principal { min-width: 0; display: flex; flex-direction: column; }
+    .ficticio { background: var(--turquesa); color: var(--violeta-2); text-align: center; font-weight: 700; font-size: 12.5px; letter-spacing: .03em; padding: 7px 12px; }
+    header.barra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 20px 28px 18px; background: linear-gradient(90deg, var(--violeta) 0%, #3A2F8F 100%); }
+    header.barra h1 { font-size: 24px; margin: 0; color: #fff; flex: 1; min-width: 200px; font-weight: 800; }
+    .periodo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .periodo select { padding: 8px 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; background: rgba(255,255,255,.1); color: #fff; }
+    .periodo select option { color: var(--tinta); }
+    .estado-corrida { padding: 12px 28px 4px; color: var(--tinta-3); font-size: 12.5px; }
+    main { padding: 8px 28px 40px; }
+
+    /* ---------- Botones ---------- */
+    .btn { border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+    .btn.accion { background: var(--turquesa); color: var(--violeta-2); border-radius: 999px; }
+    .btn.accion:hover { background: var(--turquesa-osc); }
+    .btn.sec { background: #fff; color: var(--violeta); border: 1px solid var(--borde); }
+    .btn.sec:hover { border-color: var(--azul); }
+    .btn.peligro { background: #fff; color: var(--grave); border: 1px solid #F1B7B2; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+
+    /* ---------- Tarjetas e indicadores ---------- */
+    .rejilla { display: grid; gap: 16px; }
+    .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    .tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); padding: 18px; }
+    .kpi .etq { color: var(--tinta-2); font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .kpi .valor { font-size: 28px; font-weight: 700; color: var(--violeta); margin-top: 6px; letter-spacing: -.01em; }
+    .kpi .sub { font-size: 12px; color: var(--tinta-3); margin-top: 2px; }
+    .kpi { border-top: 4px solid var(--azul); }
+    .kpi.destacado { border-top-color: var(--fucsia); }
+    .kpi.accionable { border-top-color: var(--turquesa); }
+    .kpi.violeta { border-top-color: var(--violeta); }
+    h2 { font-size: 16px; color: var(--violeta); margin: 26px 0 12px; display: flex; align-items: center; gap: 8px; }
+    h2 .ayuda { font-size: 12.5px; font-weight: 400; color: var(--tinta-3); }
+    h3 { font-size: 14px; margin: 0 0 10px; color: var(--tinta); }
+    .dos { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+
+    /* Barras de una sola serie (avance por estado) */
+    .barras { display: grid; gap: 10px; }
+    .barra-fila { display: grid; grid-template-columns: 170px 1fr 56px; align-items: center; gap: 10px; }
+    .barra-fila .nombre { font-size: 13px; color: var(--tinta-2); }
+    .pista { background: #EEF1F8; border-radius: 4px; height: 10px; overflow: hidden; }
+    .relleno { height: 100%; background: var(--azul); border-radius: 0 4px 4px 0; }
+    .barra-fila .cant { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ---------- Chips de estado (siempre con texto e ícono) ---------- */
+    .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .chip.ok { background: var(--ok-f); color: var(--ok); }
+    .chip.aviso { background: var(--aviso-f); color: var(--aviso); }
+    .chip.grave { background: var(--grave-f); color: var(--grave); }
+    .chip.info { background: var(--info-f); color: #1F5F87; }
+    .chip.neutro { background: #EEF0F6; color: var(--tinta-2); }
+
+    /* ---------- Tablas y listas ---------- */
+    .filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+    .filtros input, .filtros select { padding: 8px 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; min-width: 0; }
+    .filtros input { flex: 1; min-width: 180px; }
+    .tabla { width: 100%; border-collapse: collapse; }
+    .tabla th { text-align: left; font-size: 12px; color: var(--tinta-3); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--borde); background: #FAFBFE; }
+    .tabla td { padding: 12px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+    .tabla tr.clic { cursor: pointer; }
+    .tabla tr.clic:hover td { background: #F7F9FE; }
+    .tabla .monto { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .caso-id { font-weight: 700; color: var(--violeta); }
+    .tenue { color: var(--tinta-3); font-size: 12.5px; }
+    .contenedor-tabla { overflow-x: auto; }
+    .tarjetas-movil { display: none; }
+
+    /* Comprobantes */
+    .archivos { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    .archivo .vista { height: 120px; border-radius: 8px; background: repeating-linear-gradient(135deg, #EEF1F8 0 10px, #F6F8FC 10px 20px); display: flex; align-items: center; justify-content: center; color: var(--tinta-3); font-size: 12px; text-align: center; padding: 8px; margin-bottom: 10px; }
+    .archivo .linea { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 6px; }
+
+    /* Conciliación BAC */
+    .comparacion { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: stretch; }
+    .comparacion .lado { background: #FAFBFE; border: 1px solid var(--borde); border-radius: 10px; padding: 14px; }
+    .comparacion .lado h4 { margin: 0 0 8px; font-size: 12.5px; color: var(--tinta-3); text-transform: uppercase; letter-spacing: .04em; }
+    .comparacion dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+    .comparacion dt { color: var(--tinta-3); font-size: 12.5px; }
+    .comparacion dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .comparacion .centro { display: flex; align-items: center; justify-content: center; }
+    .difiere { color: var(--grave); }
+
+    /* Historial */
+    .linea-tiempo { list-style: none; margin: 0; padding: 0; }
+    .linea-tiempo li { position: relative; padding: 0 0 16px 26px; }
+    .linea-tiempo li::before { content: ""; position: absolute; left: 7px; top: 18px; bottom: 0; width: 2px; background: var(--borde); }
+    .linea-tiempo li:last-child::before { display: none; }
+    .linea-tiempo .punto { position: absolute; left: 0; top: 3px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--azul); background: var(--azul); }
+    .linea-tiempo .punto.ok { background: var(--ok); box-shadow: 0 0 0 2px var(--ok); }
+    .linea-tiempo .punto.grave { background: var(--grave); box-shadow: 0 0 0 2px var(--grave); }
+
+    /* Alertas */
+    .alertas { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .alerta { border-left: 5px solid var(--aviso); }
+    .alerta.grave { border-left-color: var(--grave); }
+    .alerta .cabeza { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .alerta p { margin: 8px 0 12px; color: var(--tinta-2); }
+
+    /* Panel de detalle (cajón lateral) */
+    .velo { position: fixed; inset: 0; background: rgba(27,31,69,.35); display: none; z-index: 20; }
+    .velo.abierto { display: block; }
+    .cajon { position: fixed; top: 0; right: 0; height: 100vh; width: min(640px, 100%); background: var(--fondo); z-index: 21; transform: translateX(100%); transition: transform .2s ease; display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(27,31,69,.15); }
+    .cajon.abierto { transform: none; }
+    .cajon header { background: var(--violeta); color: #fff; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+    .cajon header h2 { color: #fff; margin: 0; flex: 1; font-size: 18px; }
+    .cajon .cerrar { background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+    .pestanas { display: flex; gap: 4px; padding: 10px 16px 0; background: #fff; border-bottom: 1px solid var(--borde); overflow-x: auto; }
+    .pestanas button { background: none; border: 0; padding: 10px 12px; font-weight: 600; color: var(--tinta-3); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+    .pestanas button[aria-selected="true"] { color: var(--violeta); border-bottom-color: var(--fucsia); }
+    .cajon .cuerpo { padding: 18px 20px 30px; overflow-y: auto; flex: 1; }
+    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form label { display: grid; gap: 4px; font-size: 12.5px; color: var(--tinta-2); font-weight: 600; }
+    .form input, .form select { padding: 9px 10px; border: 1px solid var(--borde); border-radius: 8px; background: #fff; font-weight: 400; }
+    .form .ancho { grid-column: 1 / -1; }
+    .form .check { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .aviso-caja { background: var(--info-f); border-radius: 10px; padding: 12px 14px; color: #1F4E6E; font-size: 13px; margin-bottom: 14px; }
+    .aviso-caja.fucsia { background: #FCE6EF; color: #8E1042; }
+    .acciones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--violeta); color: #fff; padding: 12px 18px; border-radius: 10px; box-shadow: var(--sombra); opacity: 0; transition: all .2s; z-index: 40; max-width: calc(100% - 32px); }
+    .toast.ver { opacity: 1; transform: translateX(-50%); }
+
+    .sin-acceso { text-align: center; padding: 40px 20px; }
+    .sin-acceso .ico { width: 40px; height: 40px; color: var(--azul); }
+
+    /* ---------- Móvil ---------- */
+    .barra-movil, .menu-movil { display: none; }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .lateral { display: none; }
+      .barra-movil { display: flex; align-items: center; gap: 10px; background: var(--violeta); color: #fff; padding: 10px 16px; position: sticky; top: 0; z-index: 10; }
+      .barra-movil .logo { padding: 0; }
+      .barra-movil .logo img, .barra-movil .logo .reservado { height: 48px; }
+      .barra-movil .logo .reservado { font-size: 9px; padding: 0 6px; }
+      .barra-movil select { margin-left: auto; padding: 6px 8px; border-radius: 8px; border: 0; color: var(--violeta); font-weight: 600; max-width: 52%; }
+      .menu-movil { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--violeta); z-index: 15; justify-content: space-around; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+      .menu-movil a { color: rgba(255,255,255,.8); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; padding: 4px 2px; border-radius: 8px; flex: 1; position: relative; }
+      .menu-movil a[aria-current="page"] { color: var(--turquesa); }
+      .menu-movil a .num { position: absolute; top: 0; right: 18%; background: var(--fucsia); color: #fff; font-size: 9.5px; border-radius: 8px; padding: 0 5px; }
+      header.barra { padding: 14px 16px 14px; }
+      header.barra h1 { font-size: 19px; }
+      .estado-corrida { padding: 10px 16px 4px; }
+      main { padding: 6px 16px 90px; }
+      .dos, .comparacion { grid-template-columns: 1fr; }
+      .comparacion .centro { transform: rotate(90deg); }
+      .barra-fila { grid-template-columns: 120px 1fr 40px; }
+      .contenedor-tabla.responsive { display: none; }
+      .tarjetas-movil { display: grid; gap: 10px; }
+      .caso-movil { background: #fff; border: 1px solid var(--borde); border-radius: 12px; padding: 14px; display: grid; gap: 6px; cursor: pointer; }
+      .caso-movil .fila { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+      .form { grid-template-columns: 1fr; }
+      .kpi .valor { font-size: 24px; }
+      .kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .tarjeta { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Íconos (trazos simples, sin dependencias) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-resumen" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 13h6V4H4zM14 20h6V4h-6zM4 20h6v-3H4z"/></symbol>
+    <symbol id="i-pendientes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/></symbol>
+    <symbol id="i-comprobantes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/></symbol>
+    <symbol id="i-bac" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></symbol>
+    <symbol id="i-historial" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 8v4l3 3"/></symbol>
+    <symbol id="i-alertas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 3l10 18H2zM12 10v5M12 18v.5"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" d="M5 12l5 5 9-10"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-reloj" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" d="M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/></symbol>
+    <symbol id="i-aviso" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" d="M12 4l9 16H3zM12 10v4M12 17v.5"/></symbol>
+    <symbol id="i-candado" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-flechas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 8h14l-4-4M20 16H6l4 4"/></symbol>
+  </svg>
+
+  <div class="barra-movil">
+    <span class="logo" data-logo></span>
+    <select id="rol-movil" aria-label="Rol simulado"></select>
+  </div>
+
+  <div class="app">
+    <aside class="lateral">
+      <div class="marca">
+        <span class="logo" data-logo></span>
+        <small>Agente de conciliación · Finanzas</small>
+      </div>
+      <nav class="menu" id="menu" aria-label="Secciones"></nav>
+      <div class="rol">
+        <label for="rol">Ver como (rol simulado)</label>
+        <select id="rol"></select>
+        <div class="quien" id="quien"></div>
+      </div>
+    </aside>
+
+    <div class="principal">
+      <div class="ficticio" role="note">AMBIENTE: PROTOTIPO · DATOS FICTICIOS · No se conecta a Sheets, Drive ni BAC · Nada se guarda</div>
+      <header class="barra">
+        <h1 id="titulo">Resumen</h1>
+        <div class="periodo">
+          <select id="periodo" aria-label="Período"><option>Octubre 2026</option><option>Noviembre 2026</option></select>
+          <button class="btn accion" id="actualizar"><svg class="ico"><use href="#i-flechas"/></svg>Actualizar bandeja</button>
+        </div>
+      </header>
+      <div class="estado-corrida" id="estado-corrida"></div>
+      <main id="vista"></main>
+    </div>
+  </div>
+
+  <nav class="menu-movil" id="menu-movil" aria-label="Secciones"></nav>
+
+  <div class="velo" id="velo"></div>
+  <aside class="cajon" id="cajon" aria-hidden="true" aria-labelledby="cajon-titulo">
+    <header><h2 id="cajon-titulo"></h2><button class="cerrar" id="cerrar">Cerrar</button></header>
+    <div class="pestanas" id="pestanas" role="tablist"></div>
+    <div class="cuerpo" id="cajon-cuerpo"></div>
+  </aside>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+  // =====================================================================================================
+  // DATOS FICTICIOS. Ningún caso, cliente, monto ni movimiento es real. IDs con prefijo FICT-.
+  // Los estados y textos son los mismos que usa el servidor real (docs/30 §7 y §10), para que la pantalla
+  // final hable igual que la actual.
+  // =====================================================================================================
+  var DATOS_FICTICIOS = {
+    actualizado: '2026-11-03 09:42', actualizado_por: 'TAMI (ficticio)',
+    casos: [
+      { caso: 'FICT-1001', fecha: '2026-10-01', fuente: 'APP VCP PAGOS', servicio: 'Visa nueva', cliente: 'Cliente ficticio 01', declarado: 'CRC 122.500', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante transferencia', tipo: 'PDF', tamano: '84 KB', pista: 'Posible comprobante' }, { nombre: 'Pasaporte', tipo: 'JPG', tamano: '1,2 MB', pista: 'Posible documento personal' }],
+        monto: { moneda: 'CRC', minor: 12250000, fecha: '2026-10-01', referencia: 'FICT-900001', medio: 'Transferencia', quien: 'TAMI', cuando: '2026-11-03 10:05' },
+        propuesta: { estado: 'REVISION_MULTIPLES_COINCIDENCIAS', etiqueta: 'Varias coincidencias', aprobable: false, motivo: '2 créditos BAC con la misma referencia, monto y moneda.', movimientos: [{ fecha: '2026-10-01', minor: 12250000, moneda: 'CRC', ref: 'FICT-900001', cuenta: 'CR00****0092' }, { fecha: '2026-10-01', minor: 12250000, moneda: 'CRC', ref: 'FICT-900001', cuenta: 'CR00****0092' }] },
+        decision: null, eventos: [{ tipo: 'MONTO', quien: 'TAMI', cuando: '2026-11-03 10:05', texto: 'Registró CRC 122.500,00' }] },
+      { caso: 'FICT-1002', fecha: '2026-10-02', fuente: 'APP VCP PAGOS', servicio: 'Visa nueva', cliente: 'Cliente ficticio 02', declarado: 'USD 185', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante SINPE', tipo: 'JPG', tamano: '312 KB', pista: 'Posible comprobante' }],
+        monto: { moneda: 'USD', minor: 18500, fecha: '2026-10-02', referencia: 'FICT-910002', medio: 'SINPE', quien: 'TAMI', cuando: '2026-11-03 10:11' },
+        propuesta: { estado: 'CONCILIACION_PROPUESTA', etiqueta: 'Coincide con BAC (propuesta)', aprobable: true, motivo: 'Crédito único con misma referencia, monto y moneda a 0 días.', movimientos: [{ fecha: '2026-10-02', minor: 18500, moneda: 'USD', ref: 'FICT-910002', cuenta: 'CR00****0145' }] },
+        decision: { tipo: 'APROBADA', quien: 'TAMI', cuando: '2026-11-03 10:12', motivo: '' }, eventos: [{ tipo: 'MONTO', quien: 'TAMI', cuando: '2026-11-03 10:11', texto: 'Registró USD 185,00' }, { tipo: 'APROBADA', quien: 'TAMI', cuando: '2026-11-03 10:12', texto: 'Aprobó la conciliación' }] },
+      { caso: 'FICT-1003', fecha: '2026-10-03', fuente: 'APP VCP PAGOS', servicio: 'Renovación', cliente: 'Cliente ficticio 03', declarado: 'CRC 12.250', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante transferencia', tipo: 'PDF', tamano: '96 KB', pista: 'Posible comprobante' }],
+        monto: { moneda: 'CRC', minor: 12250000, fecha: '2026-10-03', referencia: 'FICT-900003', medio: 'Transferencia', quien: 'PRIS', cuando: '2026-11-03 11:20' },
+        propuesta: { estado: 'REVISION_MONTO_MONEDA', etiqueta: 'Diferencia de monto o moneda', aprobable: false, motivo: 'La referencia existe en BAC con otro monto.', movimientos: [{ fecha: '2026-10-03', minor: 1225000, moneda: 'CRC', ref: 'FICT-900003', cuenta: 'CR00****0092' }] },
+        decision: { tipo: 'RECHAZADA', quien: 'PRIS', cuando: '2026-11-03 11:24', motivo: 'El banco recibió CRC 12.250, no 122.500' }, eventos: [{ tipo: 'MONTO', quien: 'PRIS', cuando: '2026-11-03 11:20', texto: 'Registró CRC 122.500,00' }, { tipo: 'RECHAZADA', quien: 'PRIS', cuando: '2026-11-03 11:24', texto: 'Rechazó: el banco recibió CRC 12.250, no 122.500' }] },
+      { caso: 'FICT-1004', fecha: '2026-10-04', fuente: 'DB 360', servicio: 'Pasaporte', cliente: 'Cliente ficticio 04', declarado: 'CRC 45.000', revision: 'SIN_COMPROBANTE', archivos: [], monto: null, propuesta: null, decision: null, eventos: [] },
+      { caso: 'FICT-1005', fecha: '2026-10-06', fuente: 'PASPORTE+VISA', servicio: 'Visa + pasaporte', cliente: 'Cliente ficticio 05', declarado: 'CRC 180.000', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante transferencia', tipo: 'PDF', tamano: '71 KB', pista: 'Posible comprobante' }, { nombre: 'Comprobante (copia)', tipo: 'PDF', tamano: '71 KB', pista: 'Copia repetida (mismo archivo)' }],
+        monto: null, propuesta: null, decision: null, eventos: [] },
+      { caso: 'FICT-1006', fecha: '2026-10-08', fuente: 'APP VCP PAGOS', servicio: 'Visa nueva (2 personas)', cliente: 'Cliente ficticio 06', declarado: 'CRC 245.000', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Enlace de pago con tarjeta', tipo: 'PNG', tamano: '205 KB', pista: 'Posible comprobante' }],
+        monto: { moneda: 'CRC', minor: 24500000, fecha: '2026-10-08', referencia: 'FICT-TAR-0006', medio: 'Tarjeta', quien: 'TAMI', cuando: '2026-11-03 12:02' },
+        propuesta: { estado: 'PENDIENTE_DETALLE_COMMERCE', etiqueta: 'Pendiente de detalle Commerce', aprobable: false, motivo: 'Commerce liquida por lote: no identifica este pago individual.', movimientos: [] },
+        decision: null, eventos: [{ tipo: 'MONTO', quien: 'TAMI', cuando: '2026-11-03 12:02', texto: 'Registró CRC 245.000,00 (tarjeta)' }] },
+      { caso: 'FICT-1007', fecha: '2026-10-09', fuente: 'APP VCP PAGOS', servicio: 'Visa nueva', cliente: 'Cliente ficticio 07', declarado: 'USD 160', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante SINPE', tipo: 'JPG', tamano: '288 KB', pista: 'Posible comprobante' }], monto: null, propuesta: null, decision: null, eventos: [] },
+      { caso: 'FICT-1008', fecha: '2026-10-10', fuente: 'DB 360', servicio: 'Cita consular', cliente: 'Cliente ficticio 08', declarado: 'no informado', revision: 'SIN_CARPETA', archivos: [], monto: null, propuesta: null, decision: null, eventos: [] },
+      { caso: 'FICT-1009', fecha: '2026-10-12', fuente: 'APP VCP PAGOS + DB 360', servicio: 'Visa nueva', cliente: 'Cliente ficticio 09', declarado: 'CRC 122.500', revision: 'POSIBLE_DUPLICADO',
+        archivos: [{ nombre: 'Comprobante transferencia', tipo: 'PDF', tamano: '90 KB', pista: 'Posible comprobante' }], monto: null, propuesta: null, decision: null, eventos: [] },
+      { caso: 'FICT-1010', fecha: '2026-10-15', fuente: 'APP VCP PAGOS', servicio: 'Renovación', cliente: 'Cliente ficticio 10', declarado: 'CRC 98.000', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante transferencia', tipo: 'PDF', tamano: '77 KB', pista: 'Posible comprobante' }],
+        monto: { moneda: 'CRC', minor: 9800000, fecha: '2026-10-15', referencia: 'FICT-900010', medio: 'Transferencia', quien: 'TAMI', cuando: '2026-11-03 12:30' },
+        propuesta: { estado: 'CONCILIACION_PROPUESTA', etiqueta: 'Coincide con BAC (propuesta)', aprobable: true, motivo: 'Crédito único con misma referencia, monto y moneda a 1 día.', movimientos: [{ fecha: '2026-10-16', minor: 9800000, moneda: 'CRC', ref: 'FICT-900010', cuenta: 'CR00****0092' }] },
+        decision: null, eventos: [{ tipo: 'MONTO', quien: 'TAMI', cuando: '2026-11-03 12:30', texto: 'Registró CRC 98.000,00' }] },
+      { caso: 'FICT-1011', fecha: '2026-10-20', fuente: 'APP VCP PAGOS', servicio: 'Visa nueva', cliente: 'Cliente ficticio 11', declarado: 'CRC 122.500', revision: 'REVISAR_COMPROBANTES', historial: 'ALTERADO',
+        archivos: [{ nombre: 'Comprobante transferencia', tipo: 'PDF', tamano: '88 KB', pista: 'Posible comprobante' }], monto: null, propuesta: null, decision: null, eventos: [] },
+      { caso: 'FICT-1012', fecha: '2026-10-28', fuente: 'APP VCP PAGOS', servicio: 'Visa nueva', cliente: 'Cliente ficticio 12', declarado: 'CRC 61.250 (abono)', revision: 'REVISAR_COMPROBANTES',
+        archivos: [{ nombre: 'Comprobante abono', tipo: 'PDF', tamano: '65 KB', pista: 'Posible comprobante' }],
+        monto: { moneda: 'CRC', minor: 6125000, fecha: '2026-10-28', referencia: 'FICT-900012', medio: 'Transferencia', quien: 'PRIS', cuando: '2026-11-03 13:01' },
+        propuesta: { estado: 'CONCILIACION_PROPUESTA', etiqueta: 'Coincide con BAC (propuesta)', aprobable: true, motivo: 'Crédito único con misma referencia, monto y moneda a 0 días.', movimientos: [{ fecha: '2026-10-28', minor: 6125000, moneda: 'CRC', ref: 'FICT-900012', cuenta: 'CR00****0092' }] },
+        decision: { tipo: 'APROBADA', quien: 'PRIS', cuando: '2026-11-03 13:03', motivo: '' }, saldo: { moneda: 'CRC', minor: 6125000, nota: 'Abono de 2: falta el segundo pago (ficticio)' },
+        eventos: [{ tipo: 'MONTO', quien: 'PRIS', cuando: '2026-11-03 13:01', texto: 'Registró CRC 61.250,00 (abono)' }, { tipo: 'APROBADA', quien: 'PRIS', cuando: '2026-11-03 13:03', texto: 'Aprobó la conciliación del abono' }] }
+    ],
+    sinCorrespondencia: [
+      { fecha: '2026-10-05', minor: 4500000, moneda: 'CRC', ref: 'FICT-900777', desc: 'TEF DE: PERSONA FICTICIA 21' },
+      { fecha: '2026-10-19', minor: 16000, moneda: 'USD', ref: 'FICT-910888', desc: 'SINPE DE: PERSONA FICTICIA 22' }
+    ],
+    tecnico: { fuentes: [{ n: 'APP VCP PAGOS', e: 'Leída' }, { n: 'DB 360', e: 'Leída' }, { n: 'PASPORTE+VISA', e: 'Leída' }], extractos: [{ n: 'BAC CRC octubre', e: 'Disponible' }, { n: 'BAC USD octubre', e: 'Disponible' }, { n: 'Commerce octubre', e: 'Sin cargar' }], corridas: 3, pausas: 1 }
+  };
+
+  // Roles del prototipo, alineados con el control de acceso actual (docs/30 §6 y §13).
+  var ROLES = {
+    FINANCIERO: { nombre: 'FINANCIERO', quien: 'Aprobadora: TAMI o PRIS (ficticio)', puedeRegistrar: true, puedeDecidir: true, verMontos: true, secciones: ['resumen', 'pendientes', 'comprobantes', 'bac', 'historial', 'alertas'] },
+    CXC: { nombre: 'FINANCIERO CxC', quien: 'Rol PROPUESTO: cuentas por cobrar, cuotas, saldos y seguimiento. No aprueba conciliaciones', puedeRegistrar: false, puedeDecidir: false, verMontos: true, secciones: ['resumen', 'pendientes', 'comprobantes', 'bac', 'historial', 'alertas'] },
+    OPERATIVO: { nombre: 'OPERATIVO', quien: 'Cuenta operadora: sin datos financieros', puedeRegistrar: false, puedeDecidir: false, verMontos: false, secciones: ['resumen', 'alertas'] }
+  };
+  var SECCIONES = [
+    { id: 'resumen', titulo: 'Resumen', corto: 'Resumen', ico: 'i-resumen', grupo: 'Conciliación' },
+    { id: 'pendientes', titulo: 'Pagos pendientes de revisión', corto: 'Pendientes', ico: 'i-pendientes', grupo: 'Conciliación' },
+    { id: 'comprobantes', titulo: 'Comprobantes recibidos', corto: 'Comprob.', ico: 'i-comprobantes', grupo: 'Conciliación' },
+    { id: 'bac', titulo: 'Conciliación con BAC', corto: 'BAC', ico: 'i-bac', grupo: 'Conciliación' },
+    { id: 'historial', titulo: 'Historial y diferencias', corto: 'Historial', ico: 'i-historial', grupo: 'Seguimiento' },
+    { id: 'alertas', titulo: 'Alertas e intervención humana', corto: 'Alertas', ico: 'i-alertas', grupo: 'Seguimiento' }
+  ];
+  var REVISION = { REVISAR_COMPROBANTES: 'Revisar comprobantes', SIN_COMPROBANTE: 'Sin comprobante', SIN_CARPETA: 'Sin carpeta', POSIBLE_DUPLICADO: 'Posible duplicado', ID_CON_VARIANTES: 'ID escrito de otra forma', NO_LEIDO: 'No se pudo leer' };
+
+  var estado = { rol: 'FINANCIERO', seccion: 'resumen', filtro: '', texto: '' };
+  try { var r = localStorage.getItem('vcp-proto-rol'); if (r && ROLES[r]) estado.rol = r; } catch (e) { /* sin almacenamiento */ }
+
+  // ---------- utilidades ----------
+  function $(id) { return document.getElementById(id); }
+  function el(tag, attrs, hijos) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) { if (k === 'clase') e.className = attrs[k]; else if (k === 'texto') e.textContent = attrs[k]; else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]); else e.setAttribute(k, attrs[k]); });
+    [].concat(hijos || []).forEach(function (h) { if (h !== null && h !== undefined) e.appendChild(typeof h === 'string' ? document.createTextNode(h) : h); });
+    return e;
+  }
+  function icono(id, clase) { var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'ico ' + (clase || '')); s.setAttribute('aria-hidden', 'true'); var u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '#' + id); s.appendChild(u); return s; }
+  function dinero(minor, moneda) {
+    var v = (minor / 100).toFixed(2).split('.');
+    var ent = v[0].replace(/\B(?=(\d{3})+(?!\d))/g, moneda === 'CRC' ? '.' : ',');
+    return (moneda === 'CRC' ? '₡' : '$') + ent + (moneda === 'CRC' ? ',' : '.') + v[1];
+  }
+  function toast(t) { var x = $('toast'); x.textContent = t; x.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(function () { x.classList.remove('ver'); }, 2600); }
+  function rol() { return ROLES[estado.rol]; }
+
+  // Estado financiero del caso: las mismas reglas que VCP_EVENTOS.resumenFinanciero (P0-2), sobre datos ficticios.
+  function financiero(c) {
+    if (c.historial === 'ALTERADO') return { k: 'HISTORIAL_BLOQUEADO', t: 'Historial bloqueado', cl: 'grave', ico: 'i-candado' };
+    if (!c.monto) return { k: 'SIN_MONTO', t: 'Sin monto oficial', cl: 'neutro', ico: 'i-reloj' };
+    if (c.decision && c.decision.tipo === 'APROBADA') return { k: 'APROBADO', t: 'Aprobado por finanzas', cl: 'ok', ico: 'i-ok' };
+    if (c.decision && c.decision.tipo === 'RECHAZADA') return { k: 'RECHAZADO', t: 'Rechazado por finanzas', cl: 'grave', ico: 'i-x' };
+    if (c.monto.medio === 'Tarjeta') return { k: 'PENDIENTE_TARJETA', t: 'Pendiente: detalle de tarjeta', cl: 'aviso', ico: 'i-reloj' };
+    return { k: 'POR_DECIDIR', t: 'Monto registrado: falta decidir', cl: 'aviso', ico: 'i-reloj' };
+  }
+  function chip(f) { return el('span', { clase: 'chip ' + f.cl }, [icono(f.ico), f.t]); }
+  function chipRevision(c) {
+    var cl = c.revision === 'REVISAR_COMPROBANTES' ? 'info' : c.revision === 'POSIBLE_DUPLICADO' ? 'grave' : 'aviso';
+    return el('span', { clase: 'chip ' + cl }, REVISION[c.revision] || c.revision);
+  }
+  function propuestaChip(p) {
+    if (!p) return el('span', { clase: 'chip neutro' }, 'Sin comparar');
+    var cl = p.estado === 'CONCILIACION_PROPUESTA' ? 'ok' : p.estado === 'REVISION_MONTO_MONEDA' ? 'grave' : 'aviso';
+    return el('span', { clase: 'chip ' + cl }, [icono(cl === 'ok' ? 'i-ok' : 'i-aviso'), p.etiqueta]);
+  }
+
+  // Alertas derivadas de los datos ficticios (en la versión real saldrían del servidor).
+  function alertas() {
+    var a = [];
+    DATOS_FICTICIOS.casos.forEach(function (c) {
+      if (c.historial === 'ALTERADO') a.push({ grave: true, caso: c.caso, t: 'Historial modificado fuera de la aplicación', d: 'No se puede registrar ni decidir. PRIS o Charlie restauran la hoja desde el historial de versiones.', tecnica: true });
+      if (c.revision === 'POSIBLE_DUPLICADO') a.push({ grave: true, caso: c.caso, t: 'El caso aparece en dos fuentes', d: 'Revisar si es un servicio adicional o un duplicado antes de registrar el monto.' });
+      if (c.archivos.some(function (x) { return /Copia repetida/.test(x.pista); })) a.push({ caso: c.caso, t: 'Comprobante repetido', d: 'Dos archivos idénticos: registrar el monto una sola vez.' });
+      if (c.propuesta && c.propuesta.estado === 'REVISION_MONTO_MONEDA' && !c.decision) a.push({ grave: true, caso: c.caso, t: 'Diferencia con el banco', d: c.propuesta.motivo });
+      if (c.propuesta && c.propuesta.estado === 'REVISION_MULTIPLES_COINCIDENCIAS') a.push({ caso: c.caso, t: 'Varias coincidencias en BAC', d: 'No es aprobable: revisar el extracto y decidir a mano.' });
+      if (c.propuesta && c.propuesta.estado === 'PENDIENTE_DETALLE_COMMERCE') a.push({ caso: c.caso, t: 'Pago con tarjeta sin detalle', d: 'Commerce liquida por lote. Dejar pendiente o rechazar con motivo.' });
+      if (c.revision === 'SIN_CARPETA') a.push({ caso: c.caso, t: 'Solicitud sin carpeta', d: 'No hay dónde buscar el comprobante: pedirlo al cliente.' });
+    });
+    a.push({ caso: null, t: 'Extracto de Commerce sin cargar', d: 'Los pagos con tarjeta quedan pendientes hasta cargarlo.', tecnica: true });
+    return a;
+  }
+
+  // ---------- navegación ----------
+  function pintarMenus() {
+    var r = rol();
+    var n = alertas().filter(function (x) { return r.verMontos || x.tecnica; }).length;
+    var pend = DATOS_FICTICIOS.casos.filter(function (c) { var k = financiero(c).k; return k === 'SIN_MONTO' ? c.revision === 'REVISAR_COMPROBANTES' : k === 'POR_DECIDIR'; }).length;
+    [$('menu'), $('menu-movil')].forEach(function (m, movil) {
+      m.textContent = '';
+      var grupo = null;
+      SECCIONES.forEach(function (s) {
+        if (r.secciones.indexOf(s.id) < 0) return;
+        if (!movil && s.grupo !== grupo) { grupo = s.grupo; m.appendChild(el('div', { clase: 'grupo' }, grupo)); }
+        var num = s.id === 'alertas' ? n : s.id === 'pendientes' ? pend : 0;
+        var a = el('a', { href: '#' + s.id }, [icono(s.ico), movil ? s.corto : s.titulo]);
+        if (num) a.appendChild(el('span', { clase: 'num' + (s.id === 'alertas' ? ' fucsia' : '') }, String(num)));
+        if (estado.seccion === s.id) a.setAttribute('aria-current', 'page');
+        m.appendChild(a);
+      });
+    });
+    $('quien').textContent = r.quien;
+  }
+  function pintarRoles() {
+    [$('rol'), $('rol-movil')].forEach(function (s) {
+      s.textContent = '';
+      Object.keys(ROLES).forEach(function (k) { var o = el('option', { value: k }, ROLES[k].nombre); if (k === estado.rol) o.selected = true; s.appendChild(o); });
+    });
+  }
+  function irA() {
+    var h = (location.hash || '#resumen').slice(1);
+    if (!SECCIONES.some(function (s) { return s.id === h; })) h = 'resumen';
+    estado.seccion = rol().secciones.indexOf(h) >= 0 ? h : 'resumen';
+    pintar();
+  }
+  function cambiarRol(k) {
+    estado.rol = k;
+    try { localStorage.setItem('vcp-proto-rol', k); } catch (e) { /* sin almacenamiento */ }
+    pintarRoles();
+    cerrarCajon();
+    irA();
+  }
+
+  // ---------- vistas ----------
+  function pintar() {
+    var s = SECCIONES.filter(function (x) { return x.id === estado.seccion; })[0];
+    var r = rol();
+    $('titulo').textContent = estado.rol === 'OPERATIVO' && s.id === 'resumen' ? 'Estado técnico' : s.titulo;
+    $('estado-corrida').textContent = 'Bandeja actualizada el ' + DATOS_FICTICIOS.actualizado + ' por ' + DATOS_FICTICIOS.actualizado_por + ' · ' + DATOS_FICTICIOS.casos.length + ' casos ficticios';
+    $('actualizar').disabled = estado.rol === 'CXC';
+    pintarMenus();
+    var v = $('vista');
+    v.textContent = '';
+    var f = { resumen: vistaResumen, pendientes: vistaPendientes, comprobantes: vistaComprobantes, bac: vistaBac, historial: vistaHistorial, alertas: vistaAlertas }[s.id];
+    f(v, r);
+    window.scrollTo(0, 0);
+  }
+
+  function kpi(etq, valor, sub, clase, ico) {
+    return el('div', { clase: 'tarjeta kpi ' + (clase || '') }, [el('div', { clase: 'etq' }, [ico ? icono(ico) : null, etq]), el('div', { clase: 'valor' }, valor), sub ? el('div', { clase: 'sub' }, sub) : null]);
+  }
+  function totales() {
+    var t = { pagos: 0, aprob: 0, rech: 0, porDecidir: 0, tarjeta: 0, sinMonto: 0, bloqueados: 0, aprobado: {}, registrado: {}, porEstado: {} };
+    DATOS_FICTICIOS.casos.forEach(function (c) {
+      var f = financiero(c);
+      t.porEstado[f.t] = (t.porEstado[f.t] || 0) + 1;
+      if (f.k === 'HISTORIAL_BLOQUEADO') { t.bloqueados++; return; }
+      if (!c.monto) { t.sinMonto++; return; }
+      t.pagos++;
+      t.registrado[c.monto.moneda] = (t.registrado[c.monto.moneda] || 0) + c.monto.minor;
+      if (f.k === 'APROBADO') { t.aprob++; t.aprobado[c.monto.moneda] = (t.aprobado[c.monto.moneda] || 0) + c.monto.minor; }
+      else if (f.k === 'RECHAZADO') t.rech++;
+      else if (f.k === 'PENDIENTE_TARJETA') t.tarjeta++;
+      else t.porDecidir++;
+    });
+    return t;
+  }
+  function sumas(o) { var k = Object.keys(o).sort(); return k.length ? k.map(function (m) { return dinero(o[m], m); }).join(' · ') : '—'; }
+
+  function vistaResumen(v, r) {
+    if (estado.rol === 'OPERATIVO') return vistaTecnica(v);
+    var t = totales();
+    v.appendChild(el('div', { clase: 'rejilla kpis' }, [
+      kpi('Casos del período', String(DATOS_FICTICIOS.casos.length), '3 fuentes: APP VCP PAGOS, DB 360, PASPORTE+VISA', '', 'i-resumen'),
+      kpi('Por decidir', String(t.porDecidir), 'Con monto oficial, sin decisión', 'accionable', 'i-reloj'),
+      kpi('Aprobados por finanzas', String(t.aprob), sumas(t.aprobado), 'violeta', 'i-ok'),
+      kpi('Rechazados', String(t.rech), 'Con motivo registrado', '', 'i-x'),
+      kpi('Requieren intervención', String(alertas().length), 'Ver alertas', 'destacado', 'i-alertas')
+    ]));
+    var estados = el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Casos por estado financiero' })]);
+    var b = el('div', { clase: 'barras' });
+    var max = Math.max.apply(null, Object.keys(t.porEstado).map(function (k) { return t.porEstado[k]; }));
+    ['Sin monto oficial', 'Monto registrado: falta decidir', 'Pendiente: detalle de tarjeta', 'Aprobado por finanzas', 'Rechazado por finanzas', 'Historial bloqueado'].forEach(function (k) {
+      var n = t.porEstado[k] || 0;
+      b.appendChild(el('div', { clase: 'barra-fila', title: k + ': ' + n + ' caso(s)' }, [el('span', { clase: 'nombre' }, k), el('div', { clase: 'pista' }, el('div', { clase: 'relleno', style: 'width:' + (max ? Math.round(n / max * 100) : 0) + '%' })), el('span', { clase: 'cant' }, String(n))]));
+    });
+    estados.appendChild(b);
+    var montos = el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Montos del período (según los registros de finanzas)' }),
+      el('div', { clase: 'tenue' }, 'Monto oficial registrado'), el('div', { style: 'font-weight:700;font-size:18px;margin:2px 0 12px;color:var(--violeta)' }, sumas(t.registrado)),
+      el('div', { clase: 'tenue' }, 'Aprobado por finanzas'), el('div', { style: 'font-weight:700;font-size:18px;margin:2px 0 12px;color:var(--ok)' }, sumas(t.aprobado)),
+      el('div', { clase: 'aviso-caja' }, 'Ningún pago está confirmado hasta que una aprobadora lo aprueba. El monto declarado por el cliente no es evidencia.')]);
+    v.appendChild(el('h2', {}, ['Avance de la conciliación', el('span', { clase: 'ayuda' }, ' · octubre 2026 (ficticio)')]));
+    v.appendChild(el('div', { clase: 'rejilla dos' }, [estados, montos]));
+    v.appendChild(el('h2', {}, 'Para hoy'));
+    var lista = DATOS_FICTICIOS.casos.filter(function (c) { return ['POR_DECIDIR', 'SIN_MONTO'].indexOf(financiero(c).k) >= 0 && c.revision === 'REVISAR_COMPROBANTES'; }).slice(0, 4);
+    v.appendChild(tablaCasos(lista, r));
+  }
+
+  function vistaTecnica(v) {
+    var d = DATOS_FICTICIOS.tecnico;
+    v.appendChild(el('div', { clase: 'aviso-caja fucsia' }, 'Vista OPERATIVA: estado técnico del agente, sin montos ni datos de clientes. En FINANZAS la cuenta operadora no ve la bandeja; en DESARROLLO solo ve datos sintéticos y nunca registra ni decide.'));
+    v.appendChild(el('div', { clase: 'rejilla kpis' }, [kpi('Corridas del período', String(d.corridas), 'Última: completa', '', 'i-flechas'), kpi('Pausas por cuota de Google', String(d.pausas), 'Se continúa sola', '', 'i-reloj'), kpi('Alertas técnicas', String(alertas().filter(function (x) { return x.tecnica; }).length), 'Ver alertas', 'destacado', 'i-alertas')]));
+    var f = el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Fuentes de solicitudes' })]);
+    d.fuentes.forEach(function (x) { f.appendChild(el('div', { clase: 'archivo' }, el('div', { clase: 'linea' }, [x.n, el('span', { clase: 'chip ok' }, [icono('i-ok'), x.e])]))); });
+    var e = el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Extractos bancarios' })]);
+    d.extractos.forEach(function (x) { e.appendChild(el('div', { clase: 'archivo' }, el('div', { clase: 'linea' }, [x.n, el('span', { clase: 'chip ' + (x.e === 'Disponible' ? 'ok' : 'aviso') }, [icono(x.e === 'Disponible' ? 'i-ok' : 'i-aviso'), x.e])]))); });
+    v.appendChild(el('h2', {}, 'Fuentes y archivos'));
+    v.appendChild(el('div', { clase: 'rejilla dos' }, [f, e]));
+  }
+
+  function tablaCasos(lista, r) {
+    var cont = el('div');
+    var tabla = el('table', { clase: 'tabla' }, el('thead', {}, el('tr', {}, ['Caso', 'Solicitud', 'Revisión', 'Estado financiero', 'Declarado (no es evidencia)'].map(function (h, i) { return el('th', { clase: i === 4 ? 'monto' : '' }, h); }))));
+    var cuerpo = el('tbody');
+    var movil = el('div', { clase: 'tarjetas-movil' });
+    lista.forEach(function (c) {
+      var f = financiero(c);
+      cuerpo.appendChild(el('tr', { clase: 'clic', tabindex: '0', onclick: function () { abrirCaso(c.caso); }, onkeydown: function (e) { if (e.key === 'Enter') abrirCaso(c.caso); } }, [
+        el('td', {}, [el('div', { clase: 'caso-id' }, c.caso), el('div', { clase: 'tenue' }, c.cliente)]),
+        el('td', {}, [el('div', {}, c.servicio), el('div', { clase: 'tenue' }, c.fecha + ' · ' + c.fuente)]),
+        el('td', {}, chipRevision(c)), el('td', {}, chip(f)), el('td', { clase: 'monto tenue' }, c.declarado)]));
+      movil.appendChild(el('div', { clase: 'caso-movil', onclick: function () { abrirCaso(c.caso); } }, [
+        el('div', { clase: 'fila' }, [el('span', { clase: 'caso-id' }, c.caso), chip(f)]),
+        el('div', {}, c.servicio + ' · ' + c.fecha), el('div', { clase: 'fila' }, [chipRevision(c), el('span', { clase: 'tenue' }, 'Declarado: ' + c.declarado)])]));
+    });
+    tabla.appendChild(cuerpo);
+    cont.appendChild(el('div', { clase: 'tarjeta contenedor-tabla responsive', style: 'padding:0' }, tabla));
+    cont.appendChild(movil);
+    if (!lista.length) cont.appendChild(el('div', { clase: 'tarjeta tenue' }, 'Ningún caso con ese filtro.'));
+    return cont;
+  }
+
+  function vistaPendientes(v, r) {
+    var filtros = el('div', { clase: 'filtros' });
+    var busca = el('input', { type: 'search', placeholder: 'Buscar caso o servicio…', 'aria-label': 'Buscar', value: estado.texto });
+    var sel = el('select', { 'aria-label': 'Estado financiero' });
+    [['', 'Todos los estados'], ['SIN_MONTO', 'Sin monto oficial'], ['POR_DECIDIR', 'Monto registrado: falta decidir'], ['PENDIENTE_TARJETA', 'Pendiente: detalle de tarjeta'], ['APROBADO', 'Aprobado por finanzas'], ['RECHAZADO', 'Rechazado por finanzas'], ['HISTORIAL_BLOQUEADO', 'Historial bloqueado']].forEach(function (o) { var x = el('option', { value: o[0] }, o[1]); if (o[0] === estado.filtro) x.selected = true; sel.appendChild(x); });
+    filtros.appendChild(busca); filtros.appendChild(sel);
+    var zona = el('div');
+    function refrescar() {
+      estado.texto = busca.value; estado.filtro = sel.value;
+      var q = busca.value.toLowerCase();
+      zona.textContent = '';
+      zona.appendChild(tablaCasos(DATOS_FICTICIOS.casos.filter(function (c) { return (!sel.value || financiero(c).k === sel.value) && (!q || (c.caso + ' ' + c.servicio + ' ' + c.cliente).toLowerCase().indexOf(q) >= 0); }), r));
+    }
+    busca.addEventListener('input', refrescar); sel.addEventListener('change', refrescar);
+    v.appendChild(el('div', { clase: 'aviso-caja' }, r.puedeRegistrar ? 'Abrí un caso para ver sus comprobantes, registrar el monto oficial y decidir.' : 'Solo lectura: este rol no registra montos ni decide.'));
+    v.appendChild(filtros); v.appendChild(zona); refrescar();
+  }
+
+  function vistaComprobantes(v) {
+    var g = el('div', { clase: 'rejilla archivos' });
+    DATOS_FICTICIOS.casos.forEach(function (c) {
+      c.archivos.forEach(function (a, i) {
+        g.appendChild(el('div', { clase: 'tarjeta archivo' }, [
+          el('div', { clase: 'vista' }, 'Vista previa no disponible en el prototipo · ' + a.tipo + ' FICTICIO'),
+          el('div', { clase: 'linea' }, [el('strong', {}, a.nombre), el('span', { clase: 'tenue' }, a.tipo + ' · ' + a.tamano)]),
+          el('div', { clase: 'linea' }, [el('span', { clase: 'caso-id' }, c.caso + ' · archivo ' + (i + 1)), el('span', { clase: 'chip ' + (/repetida/.test(a.pista) ? 'aviso' : 'info') }, a.pista)]),
+          el('div', { clase: 'tenue', style: 'margin-top:6px' }, 'Sugerencia del agente (no es una decisión)'),
+          el('div', { clase: 'acciones' }, [el('button', { clase: 'btn sec', onclick: function () { toast('Prototipo: en la versión real abre el archivo en Drive.'); } }, 'Abrir en Drive'), el('button', { clase: 'btn accion', onclick: function () { abrirCaso(c.caso, 'monto'); } }, 'Revisar')])]));
+      });
+    });
+    v.appendChild(el('div', { clase: 'aviso-caja' }, 'Archivos de las carpetas de los casos. El agente sugiere qué parece un comprobante; quien decide es finanzas.'));
+    v.appendChild(g);
+  }
+
+  function lados(c) {
+    var p = c.propuesta, m = c.monto, mov = p && p.movimientos[0];
+    var dif = mov && mov.minor !== m.minor;
+    var izq = el('div', { clase: 'lado' }, [el('h4', {}, 'Comprobante (monto oficial)'), el('dl', {}, [el('dt', {}, 'Monto'), el('dd', {}, dinero(m.minor, m.moneda)), el('dt', {}, 'Fecha'), el('dd', {}, m.fecha), el('dt', {}, 'Referencia'), el('dd', {}, m.referencia), el('dt', {}, 'Medio'), el('dd', {}, m.medio)])]);
+    var der = el('div', { clase: 'lado' }, [el('h4', {}, 'Movimiento BAC')].concat(mov ? [el('dl', {}, [el('dt', {}, 'Monto'), el('dd', { clase: dif ? 'difiere' : '' }, dinero(mov.minor, mov.moneda) + (dif ? '  ≠' : '')), el('dt', {}, 'Fecha'), el('dd', {}, mov.fecha), el('dt', {}, 'Referencia'), el('dd', {}, mov.ref), el('dt', {}, 'Cuenta'), el('dd', {}, mov.cuenta)])] : [el('div', { clase: 'tenue' }, p && p.estado === 'PENDIENTE_DETALLE_COMMERCE' ? 'Commerce liquida por lote: sin movimiento individual.' : 'Sin movimiento asociado.')]));
+    if (p && p.movimientos.length > 1) der.appendChild(el('div', { clase: 'chip aviso', style: 'margin-top:8px' }, [icono('i-aviso'), p.movimientos.length + ' créditos iguales en el extracto']));
+    return el('div', { clase: 'comparacion' }, [izq, el('div', { clase: 'centro' }, icono('i-flechas')), der]);
+  }
+
+  function vistaBac(v) {
+    var con = DATOS_FICTICIOS.casos.filter(function (c) { return c.propuesta; });
+    v.appendChild(el('div', { clase: 'aviso-caja' }, 'El agente compara el monto oficial del comprobante con los extractos de BAC y propone; nunca aprueba solo.'));
+    con.forEach(function (c) {
+      var t = el('div', { clase: 'tarjeta', style: 'margin-bottom:14px' }, [
+        el('div', { clase: 'filtros', style: 'justify-content:space-between;margin-bottom:10px' }, [el('span', {}, [el('span', { clase: 'caso-id' }, c.caso), ' · ' + c.servicio]), el('span', {}, [propuestaChip(c.propuesta), ' ', chip(financiero(c))])]),
+        lados(c), el('div', { clase: 'tenue', style: 'margin-top:10px' }, c.propuesta.motivo),
+        el('div', { clase: 'acciones' }, el('button', { clase: 'btn sec', onclick: function () { abrirCaso(c.caso, 'bac'); } }, 'Ver caso'))]);
+      v.appendChild(t);
+    });
+    v.appendChild(el('h2', {}, ['Créditos de BAC sin comprobante', el('span', { clase: 'ayuda' }, ' · ningún caso los explica todavía')]));
+    var tabla = el('table', { clase: 'tabla' }, [el('thead', {}, el('tr', {}, [el('th', {}, 'Fecha'), el('th', {}, 'Referencia'), el('th', {}, 'Descripción'), el('th', { clase: 'monto' }, 'Monto')])), el('tbody', {}, DATOS_FICTICIOS.sinCorrespondencia.map(function (m) { return el('tr', {}, [el('td', {}, m.fecha), el('td', {}, m.ref), el('td', { clase: 'tenue' }, m.desc), el('td', { clase: 'monto' }, dinero(m.minor, m.moneda))]); }))]);
+    v.appendChild(el('div', { clase: 'tarjeta contenedor-tabla', style: 'padding:0' }, tabla));
+  }
+
+  function vistaHistorial(v, r) {
+    var ev = [];
+    DATOS_FICTICIOS.casos.forEach(function (c) { c.eventos.forEach(function (e) { ev.push({ caso: c.caso, e: e }); }); });
+    ev.sort(function (a, b) { return a.e.cuando < b.e.cuando ? 1 : -1; });
+    var lt = el('ul', { clase: 'linea-tiempo' });
+    ev.forEach(function (x) {
+      lt.appendChild(el('li', {}, [el('span', { clase: 'punto ' + (x.e.tipo === 'APROBADA' ? 'ok' : x.e.tipo === 'RECHAZADA' ? 'grave' : '') }), el('div', {}, [el('span', { clase: 'caso-id' }, x.caso), ' · ' + x.e.texto]), el('div', { clase: 'tenue' }, x.e.quien + ' · ' + x.e.cuando + ' · firmado y encadenado')]));
+    });
+    var dif = el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Diferencias y saldos' })]);
+    DATOS_FICTICIOS.casos.forEach(function (c) {
+      if (c.propuesta && c.propuesta.estado === 'REVISION_MONTO_MONEDA') dif.appendChild(el('div', { clase: 'archivo', style: 'margin-bottom:10px' }, [el('div', { clase: 'linea' }, [el('span', { clase: 'caso-id' }, c.caso), el('span', { clase: 'chip grave' }, 'Diferencia')]), el('div', { clase: 'tenue' }, 'Comprobante ' + dinero(c.monto.minor, c.monto.moneda) + ' · BAC ' + dinero(c.propuesta.movimientos[0].minor, c.monto.moneda))]));
+      if (c.saldo) dif.appendChild(el('div', { clase: 'archivo', style: 'margin-bottom:10px' }, [el('div', { clase: 'linea' }, [el('span', { clase: 'caso-id' }, c.caso), el('span', { clase: 'chip aviso' }, 'Saldo pendiente')]), el('div', { clase: 'tenue' }, dinero(c.saldo.minor, c.saldo.moneda) + ' · ' + c.saldo.nota)]));
+    });
+    if (estado.rol === 'CXC') dif.appendChild(el('div', { clase: 'aviso-caja', style: 'margin-top:8px' }, 'Vista CxC: los saldos de pagos parciales son la entrada de cuentas por cobrar (fase posterior, docs/28). En el MVP solo se muestran.'));
+    v.appendChild(el('div', { clase: 'rejilla dos' }, [el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Registros de finanzas (más recientes primero)' }), lt]), dif]));
+  }
+
+  function vistaAlertas(v, r) {
+    var lista = alertas().filter(function (x) { return r.verMontos || x.tecnica; });
+    if (!r.verMontos) v.appendChild(el('div', { clase: 'aviso-caja fucsia' }, 'Vista OPERATIVA: solo alertas técnicas, sin datos de clientes ni montos.'));
+    var g = el('div', { clase: 'rejilla alertas' });
+    lista.forEach(function (a) {
+      g.appendChild(el('div', { clase: 'tarjeta alerta' + (a.grave ? ' grave' : '') }, [
+        el('div', { clase: 'cabeza' }, [el('strong', {}, a.t), el('span', { clase: 'chip ' + (a.grave ? 'grave' : 'aviso') }, [icono('i-aviso'), a.grave ? 'Bloquea' : 'Revisar'])]),
+        el('p', {}, a.d),
+        a.caso && r.verMontos ? el('button', { clase: 'btn sec', onclick: function () { abrirCaso(a.caso); } }, 'Abrir ' + a.caso) : el('span', { clase: 'tenue' }, a.caso ? '' : 'Configuración')]));
+    });
+    v.appendChild(g);
+  }
+
+  // ---------- detalle del caso ----------
+  var abierto = null;
+  function abrirCaso(id, pestana) {
+    if (!rol().verMontos) return;
+    abierto = DATOS_FICTICIOS.casos.filter(function (c) { return c.caso === id; })[0];
+    $('cajon-titulo').textContent = abierto.caso + ' · ' + abierto.servicio;
+    $('cajon').classList.add('abierto'); $('cajon').setAttribute('aria-hidden', 'false'); $('velo').classList.add('abierto');
+    pestanaCaso(pestana || (abierto.monto ? 'bac' : 'comprobantes'));
+  }
+  function cerrarCajon() { $('cajon').classList.remove('abierto'); $('cajon').setAttribute('aria-hidden', 'true'); $('velo').classList.remove('abierto'); }
+  function pestanaCaso(p) {
+    var c = abierto, r = rol();
+    var tabs = [['comprobantes', 'Comprobantes'], ['monto', 'Monto oficial'], ['bac', 'Comparación BAC'], ['historial', 'Historial']];
+    var pt = $('pestanas'); pt.textContent = '';
+    tabs.forEach(function (t) { pt.appendChild(el('button', { role: 'tab', 'aria-selected': String(t[0] === p), onclick: function () { pestanaCaso(t[0]); } }, t[1])); });
+    var b = $('cajon-cuerpo'); b.textContent = '';
+    b.appendChild(el('div', { clase: 'filtros' }, [chipRevision(c), chip(financiero(c)), el('span', { clase: 'tenue' }, c.cliente + ' · ' + c.fecha + ' · declarado ' + c.declarado + ' (no es evidencia)')]));
+    if (c.historial === 'ALTERADO') { b.appendChild(el('div', { clase: 'aviso-caja fucsia' }, 'Historial modificado fuera de la aplicación: no se puede registrar ni decidir hasta restaurar la hoja.')); }
+    if (p === 'comprobantes') {
+      if (!c.archivos.length) b.appendChild(el('div', { clase: 'tarjeta tenue' }, 'Este caso no tiene archivos. Pedir el comprobante al cliente.'));
+      c.archivos.forEach(function (a, i) { b.appendChild(el('div', { clase: 'tarjeta archivo', style: 'margin-bottom:10px' }, [el('div', { clase: 'linea' }, [el('strong', {}, 'Archivo ' + (i + 1) + ': ' + a.nombre), el('span', { clase: 'tenue' }, a.tipo + ' · ' + a.tamano)]), el('div', { clase: 'tenue' }, 'Sugerencia del agente (no es una decisión): ' + a.pista), el('div', { clase: 'acciones' }, el('button', { clase: 'btn sec', onclick: function () { toast('Prototipo: en la versión real abre el archivo en Drive.'); } }, 'Abrir en Drive'))])); });
+    }
+    if (p === 'monto') {
+      if (c.monto) b.appendChild(el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Monto oficial registrado' }), el('div', { style: 'font-size:22px;font-weight:700;color:var(--violeta)' }, dinero(c.monto.minor, c.monto.moneda)), el('div', { clase: 'tenue' }, 'Pago del ' + c.monto.fecha + ' · ref. ' + c.monto.referencia + ' · ' + c.monto.medio), el('div', { clase: 'tenue' }, 'Registrado por ' + c.monto.quien + ' el ' + c.monto.cuando + '. No es una aprobación del pago.')]));
+      else if (!r.puedeRegistrar || c.historial === 'ALTERADO') b.appendChild(el('div', { clase: 'tarjeta tenue' }, 'Sin monto oficial registrado.' + (r.puedeRegistrar ? '' : ' Solo una aprobadora puede registrarlo.')));
+      else b.appendChild(formularioMonto(c));
+    }
+    if (p === 'bac') {
+      if (!c.propuesta) b.appendChild(el('div', { clase: 'tarjeta tenue' }, 'Primero hay que registrar el monto oficial del comprobante.'));
+      else {
+        b.appendChild(el('div', { clase: 'tarjeta' }, [el('div', { clase: 'filtros' }, [propuestaChip(c.propuesta)]), lados(c), el('div', { clase: 'tenue', style: 'margin-top:10px' }, c.propuesta.motivo)]));
+        if (c.decision) b.appendChild(el('div', { clase: 'tarjeta', style: 'margin-top:12px;border-left:5px solid ' + (c.decision.tipo === 'APROBADA' ? 'var(--ok)' : 'var(--grave)') }, [el('strong', {}, (c.decision.tipo === 'APROBADA' ? 'Aprobado' : 'Rechazado') + ' por ' + c.decision.quien + ' el ' + c.decision.cuando), c.decision.motivo ? el('div', { clase: 'tenue' }, 'Motivo: ' + c.decision.motivo) : null]));
+        else if (r.puedeDecidir && c.historial !== 'ALTERADO') b.appendChild(decision(c));
+        else b.appendChild(el('div', { clase: 'tarjeta tenue', style: 'margin-top:12px' }, 'Solo una aprobadora puede aprobar o rechazar.'));
+      }
+    }
+    if (p === 'historial') {
+      var lt = el('ul', { clase: 'linea-tiempo' });
+      if (!c.eventos.length) b.appendChild(el('div', { clase: 'tarjeta tenue' }, 'Sin registros de finanzas para este caso.'));
+      c.eventos.slice().reverse().forEach(function (e) { lt.appendChild(el('li', {}, [el('span', { clase: 'punto ' + (e.tipo === 'APROBADA' ? 'ok' : e.tipo === 'RECHAZADA' ? 'grave' : '') }), el('div', {}, e.texto), el('div', { clase: 'tenue' }, e.quien + ' · ' + e.cuando)])); });
+      if (c.eventos.length) b.appendChild(el('div', { clase: 'tarjeta' }, lt));
+    }
+  }
+  function formularioMonto(c) {
+    var f = el('div', { clase: 'tarjeta' }, [el('h3', { texto: 'Registrar el monto oficial (leído en el comprobante)' }), el('div', { clase: 'aviso-caja' }, 'Escribí solo lo que muestra el comprobante. Si falta la fecha o la referencia, no la completes con otros datos: el caso queda pendiente.')]);
+    var moneda = el('select', {}, [el('option', { value: '' }, 'Elegir…'), el('option', { value: 'CRC' }, 'Colones (₡)'), el('option', { value: 'USD' }, 'Dólares ($)')]);
+    var monto = el('input', { inputmode: 'decimal', placeholder: '0,00' }), fecha = el('input', { type: 'date' }), ref = el('input', { placeholder: 'Como aparece en el comprobante' });
+    var medio = el('select', {}, ['Transferencia', 'SINPE', 'Depósito', 'Tarjeta'].map(function (m) { return el('option', {}, m); }));
+    var destino = el('input', { type: 'checkbox' });
+    var g = el('div', { clase: 'form' }, [el('label', {}, ['Moneda', moneda]), el('label', {}, ['Monto', monto]), el('label', {}, ['Fecha del pago', fecha]), el('label', {}, ['Referencia', ref]), el('label', {}, ['Medio de pago', medio]), el('label', {}, ['Concepto', el('select', {}, ['VISAS', 'PASAPORTES', 'CITAS'].map(function (x) { return el('option', {}, x); }))]), el('label', { clase: 'ancho check' }, [destino, 'El comprobante muestra como destino una cuenta de VCP'])]);
+    f.appendChild(g);
+    f.appendChild(el('div', { clase: 'acciones' }, el('button', { clase: 'btn accion', onclick: function () {
+      if (!moneda.value || !monto.value || !fecha.value) { toast('Faltan moneda, monto o fecha: no se registra.'); return; }
+      toast('Simulado: en la versión real se guarda firmado. Aquí no se guardó nada.');
+    } }, 'Registrar monto')));
+    return f;
+  }
+  function decision(c) {
+    var motivo = el('input', { placeholder: 'Obligatorio para rechazar' });
+    var d = el('div', { clase: 'tarjeta', style: 'margin-top:12px' }, [el('h3', { texto: 'Decisión de finanzas' }), el('div', { clase: 'form' }, el('label', { clase: 'ancho' }, ['Motivo', motivo]))]);
+    var ap = el('button', { clase: 'btn accion', onclick: function () { registrar('APROBADA', ''); } }, [icono('i-ok'), 'Aprobar conciliación']);
+    if (!c.propuesta.aprobable) { ap.disabled = true; ap.title = 'No aprobable: ' + c.propuesta.etiqueta; }
+    var re = el('button', { clase: 'btn peligro', onclick: function () { if (!motivo.value) { toast('Escribí el motivo del rechazo.'); return; } registrar('RECHAZADA', motivo.value); } }, [icono('i-x'), 'Rechazar']);
+    d.appendChild(el('div', { clase: 'acciones' }, [ap, re]));
+    if (!c.propuesta.aprobable) d.appendChild(el('div', { clase: 'tenue', style: 'margin-top:8px' }, 'Aprobar está deshabilitado: ' + c.propuesta.etiqueta + '.'));
+    function registrar(tipo, m) {
+      c.decision = { tipo: tipo, quien: 'Vos (ficticio)', cuando: 'ahora', motivo: m };
+      c.eventos.push({ tipo: tipo, quien: 'Vos (ficticio)', cuando: '2026-11-03 14:00', texto: tipo === 'APROBADA' ? 'Aprobó la conciliación' : 'Rechazó: ' + m });
+      toast('Simulado en memoria: se pierde al recargar.');
+      pestanaCaso('bac'); pintar();
+    }
+    return d;
+  }
+
+  // ---------- logo ----------
+  // Archivo oficial, sin modificar: logo-vcp.png junto a esta página. Si falta, espacio reservado.
+  document.querySelectorAll('[data-logo]').forEach(function (n) {
+    var img = new Image();
+    img.alt = 'Viaja con Pri';
+    img.onload = function () { n.textContent = ''; n.appendChild(img); };
+    img.onerror = function () { n.textContent = ''; n.appendChild(el('span', { clase: 'reservado' }, 'Logo oficial de VCP (falta logo-vcp.png)')); };
+    img.src = 'logo-vcp.png';
+  });
+
+  // ---------- inicio ----------
+  $('rol').addEventListener('change', function (e) { cambiarRol(e.target.value); });
+  $('rol-movil').addEventListener('change', function (e) { cambiarRol(e.target.value); });
+  $('cerrar').addEventListener('click', cerrarCajon);
+  $('velo').addEventListener('click', cerrarCajon);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cerrarCajon(); });
+  $('actualizar').addEventListener('click', function () { toast('Simulado: la versión real lee las 3 fuentes por lotes y puede pausar por la cuota de Google.'); });
+  window.addEventListener('hashchange', irA);
+  pintarRoles();
+  irA();
+  </script>
+</body>
+</html>
